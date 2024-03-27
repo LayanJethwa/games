@@ -1,233 +1,170 @@
 import random
-grid = []
-size = 30
-for i in range(size):
-    temp_list = []
-    for i in range(size):
-        if random.randint(1,size) % 6 == 0:
-            temp_list.append('x')
-        else:
-            temp_list.append('o')
-    grid.append(temp_list)
-for i in range(len(grid)):
-    for j in range(len(grid[i])):
-        count = 0
-        if grid[i][j] == 'o':
-            if i>0:
-                if j>0:
-                    if grid[i-1][j-1] == 'x':
-                        count += 1
-                if j<(len(grid[i])-1):
-                    if grid[i-1][j+1] == 'x':
-                        count += 1
-                if grid[i-1][j] == 'x':
-                    count += 1
-
-            if j>0:
-                if grid[i][j-1] == 'x':
-                    count += 1
-            if j<(len(grid[i])-1):
-                if grid[i][j+1] == 'x':
-                    count += 1
-                
-            if i<(len(grid)-1):
-                if j>0:
-                    if grid[i+1][j-1] == 'x':
-                        count += 1
-                if j<(len(grid[i])-1):
-                    if grid[i+1][j+1] == 'x':
-                        count += 1
-                if grid[i+1][j] == 'x':
-                    count += 1
-            grid[i][j] = str(count)
-
-import thorpy
 import pygame
-import sys
 import time
-import threading
-import os
-import signal
 pygame.init()
+
 screen = pygame.display.set_mode((800, 800))
 pygame.display.set_caption('Minesweeper')
 running = True
-game_finished = False
-black = (0,0,0)
-white = (255,255,255)
 
-painter1 = thorpy.painters.basicframe.BasicFrame(size=(800/size,800/size),color=(229,194,159))
-painter2 = thorpy.painters.basicframe.BasicFrame(size=(800/size,800/size),color=(215,184,153))
-painter3 = thorpy.painters.basicframe.BasicFrame(size=(800/size,800/size),color=(170,215,81))
-painter4 = thorpy.painters.basicframe.BasicFrame(size=(800/size,800/size),color=(162,209,73))
-render_grid = []
+g_size = 10
+r_size = 800//g_size
 
+font = pygame.font.SysFont(None, int(r_size/1.2))
 flag = pygame.image.load("flag.png").convert_alpha()
-flag = pygame.transform.scale(flag,(800/size,800/size))
+flag = pygame.transform.scale(flag,(r_size,r_size))
 flag1 = pygame.image.load("flag1.png").convert_alpha()
-flag1 = pygame.transform.scale(flag1,(800/size,800/size))
+flag1 = pygame.transform.scale(flag1,(r_size,r_size))
 
-clicked = []
-for i in range(size):
-    temp_list = []
-    for j in range(size):
-        temp_list.append(False)
-    clicked.append(temp_list)
+grid = []
+for i in range(g_size):
+    t = []
+    for j in range(g_size):
+        if random.randint(0,g_size//2) == 0:
+            t += ['x']
+        else:
+            t += ['o']
+    grid.append(t)
 
-myfont = pygame.font.SysFont(None, 60) # Text and button initialisation
-text = myfont.render((""), True, (black))
+m = (g_size-1)//2
+for i in [m,m-1,m+1]:
+    for j in [m,m-1,m+1]:
+        grid[i][j] = 'o'
 
-def quit_game():
-    global running
-    running = False
-    os._exit(0)
-    os.kill(os.getpid(), signal.SIGTERM)
+opened = {}
 
-def lose():
-    global text, game_finished
-    myfont = pygame.font.SysFont(None, 60)
-    text = myfont.render(("Oh no, you lost the game."), True, (white))
-    time.sleep(1)
-    game_finished = True
-    threading.Timer(2,quit_game).start()
+while 'o' in ''.join([''.join(i) for i in grid]):
+    n_grid = [['o']*(g_size+2)]+[['o']+i+['o'] for i in grid]+[['o']*(g_size+2)]
+    for i in range(g_size):
+        for j in range(g_size):
+            if grid[i][j] != 'x':
+                a = [(i+1,j),(i+1,j+2),(i,j),(i,j+1),(i,j+2),(i+2,j),(i+2,j+1),(i+2,j+2)]
+                grid[i][j] = str([n_grid[i[0]][i[1]] for i in a].count('x'))
 
-def win():
-    global text, game_finished
-    myfont = pygame.font.SysFont(None, 60)
-    text = myfont.render(("Well done, you have won!"), True, (white))
-    time.sleep(1)
-    game_finished = True
-    threading.Timer(2,quit_game).start()
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, width, height, left, top):
+        super().__init__()
+        self.image = pygame.Surface([width, height])
+        self.rect = self.image.get_rect()
+        self.rect.x = left
+        self.rect.y = top
 
-def click(x,y):
-    global render_grid
-    global clicked
-    if (x+y)%2 == 0:
-        render_grid[x][y].set_painter(painter1)
-    elif (x+y)%2 == 1:
-        render_grid[x][y].set_painter(painter2)
-    clicked[x][y] = True
-    render_grid[x][y].finish()
-    render_grid[x][y].set_topleft((y*(800/size),x*(800/size)))
-    render_grid[x][y].set_font_size(35)
-    setup(render_grid[x][y])
-    render_grid[x][y].update()
-    render_grid[x][y].unblit_and_reblit()
-    if grid[x][y] == '0':
-        grid[x][y] = 'o'
-        if x > 0:
-            if y > 0:
-                click(x-1,y-1)
-                click(x,y-1)
-            if y < size-1:
-                click(x-1,y+1)
-                click(x,y+1)
-            click(x-1,y)
-        if x < size-1:
-            if y > 0:
-                click(x+1,y-1)
-            if y < size-1:
-                click(x+1,y+1)
-            click(x+1,y)
-    elif grid[x][y] == 'x':
-        lose()
-    else:
-        None
+tile_list = pygame.sprite.Group()
+tile_list.empty()
+tiles = {}
+for x in range(g_size):
+    for y in range(g_size):
+        tiles[str(x)+str(y)] = Tile(r_size, r_size, x*r_size, y*r_size)
+        if (x+y) % 2 == 0:
+            tiles[str(x)+str(y)].image.fill((170,215,81))
+        else:
+            tiles[str(x)+str(y)].image.fill((162,209,73))
+        tile_list.add(tiles[str(x)+str(y)])
+tile_list.update()
 
-    if sum(row.count(True) for row in clicked) == (size**2) - sum(row.count('x') for row in grid):
-        win()
+text = {}
 
-for i in range(size):
-    temp_list = []
-    for j in range(size):
-        temp_list.append(thorpy.make_button(grid[i][j],click,params={'x':i,'y':j}))
-    render_grid.append(temp_list)
+lost_text = font.render(("Oh no, you lost the game!"), True, (255,255,255))
+lost = False
+won_text = font.render(("Well done, you won the game!"), True, (255,255,255))
+won = False
+game_over_screen_fade = pygame.Surface((800, 800))
+game_over_screen_fade.fill((0, 0, 0))
+game_over_screen_fade.set_alpha(160)
 
-elements = []
-temp_grid = []
-
-for i in range(len(render_grid)):
-    for j in range(len(render_grid[i])):
-        if (i+j)%2 == 0:
-            render_grid[i][j].set_painter(painter3)
-        elif (i+j)%2 == 1:
-            render_grid[i][j].set_painter(painter4)
-        render_grid[i][j].finish()
-        render_grid[i][j].set_topleft((j*(800/size),i*(800/size)))
-        elements.append(render_grid[i][j])
-        temp_grid.append(render_grid[i][j])
+q = []
+def click(tile):
+    global lost
+    global won
     
-def setup(i):
-    i.set_font("Gothic")
-    if i.get_text() == '1':
-        i.set_font_color((25,118,210))
-        i.set_font_color_hover((25,118,210))
-    if i.get_text() == '2':
-        i.set_font_color((56,142,60))
-        i.set_font_color_hover((56,142,60))
-    if i.get_text() == '3':
-        i.set_font_color((211,47,47))
-        i.set_font_color_hover((211,47,47))
-    if i.get_text() == '4':
-        i.set_font_color((123,31,162))
-        i.set_font_color_hover((123,31,162))
-    if i.get_text() == '5':
-        i.set_font_color((244,155,42))
-        i.set_font_color_hover((244,155,42))
-    if i.get_text() == '0':
-        i.set_text('')
+    if ((tile.rect.x//r_size)+(tile.rect.y//r_size)) % 2 == 0:
+        tile.image.fill((229,194,159))
+    else:
+        tile.image.fill((215,184,153))
 
-for i in elements:
-    i.set_font_size(0)
-    setup(i)
-        
-background = thorpy.Background(color=(255, 255, 255), elements=elements)
-menu = thorpy.Menu(background)
-def blit_all():
-    for element in menu.get_population():
-        element.surface = screen
-        element.blit()
+    num = grid[tile.rect.y//r_size][tile.rect.x//r_size]
+    if num == '0':
+        num = ''
+        col = (0,0,0)
+    elif num == '1':
+        col = (25,118,210)
+    elif num == '2':
+        col = (56,142,60)
+    elif num == '3':
+        col = (211,47,47)
+    elif num == '4':
+        col = (123,31,162)
+    elif num == '5':
+        col = (244,155,42)
+    elif num == 'x':
+        col = (0,0,0)
+        lost = True
 
-blit_all()
-pygame.display.flip()
+    text[((tile.rect.x),(tile.rect.y))] = font.render((num), True, col)
+
+    opened[(tile.rect.x, tile.rect.y)] = True
+    if len(opened) == g_size**2 - ''.join([''.join(i) for i in grid]).count('x'):
+        won = True
+
+    if num == '':
+        for t in tile_list:
+            if abs(t.rect.y - tile.rect.y) + abs(t.rect.x - tile.rect.x) in [r_size,r_size*2] and grid[t.rect.y//r_size][t.rect.x//r_size] != 'x' and not opened.get((t.rect.x,t.rect.y),False):
+                q.append(t)
+
+
+for tile in tile_list:
+    if tile.rect.x//r_size == (g_size-1)//2 == tile.rect.y//r_size:
+        click(tile)
 
 while running:
-    screen.fill(black)
-    if not game_finished:
-        blit_all()
-    for event in pygame.event.get(): 
+    screen.fill((0,0,0))
+        
+    tile_list.draw(screen)
+    for t in text:
+        screen.blit(text[t], text[t].get_rect(center=(t[0]+(r_size//2), t[1]+(r_size//2))))
+
+    if lost:
+        screen.blit(game_over_screen_fade, (0, 0))
+        screen.blit(lost_text, lost_text.get_rect(center=(400,400)))
+    elif won:
+        screen.blit(game_over_screen_fade, (0, 0))
+        screen.blit(won_text, won_text.get_rect(center=(400,400)))
+
+    if len(q) != 0:
+        click(q.pop(0))
+    
+    for event in pygame.event.get():
+        
         if event.type == pygame.QUIT:
             running = False
             pygame.quit()
-            sys.exit()
             exit()
             quit()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and (clicked[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))] == False):
-            if (render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))]).get_text() != 'f':
-                elements.remove(render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))])
-                if (int(event.pos[1]//(800/size)) + int(event.pos[0]//(800/size))) % 2 == 0:
-                    render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))] = thorpy.make_image_button(flag)
-                elif (int(event.pos[1]//(800/size)) + int(event.pos[0]//(800/size))) % 2 == 1:
-                    render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))] = thorpy.make_image_button(flag1)
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].set_topleft((((event.pos[0]//(800/size))*(800/size)),((event.pos[1]//(800/size))*(800/size))))
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].set_text('f')
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].set_font_size(0)
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].update()
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].unblit_and_reblit()
-                elements.append(render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))])
-            elif (render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))]).get_text() == 'f':
-                elements.remove(render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))])
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))] = temp_grid[(((int(event.pos[1]//(800/size)))*size)+(int(event.pos[0]//(800/size))))]
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].set_topleft((((event.pos[0]//(800/size))*(800/size)),((event.pos[1]//(800/size))*(800/size))))
-                setup(render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))])
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].update()
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].unblit_and_reblit()
-                elements.append(render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))])
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].update()
-                render_grid[int(event.pos[1]//(800/size))][int(event.pos[0]//(800/size))].unblit_and_reblit()
-            background = thorpy.Background(color=(255, 255, 255), elements=elements)
-            menu = thorpy.Menu(background)
-    menu.react(event)
-    if game_finished:
-        screen.blit(text,text.get_rect(center=(400,100)))
+            
+        elif event.type == pygame.MOUSEBUTTONDOWN and not won and not lost:
+            x, y = event.pos
+            for tile in tile_list:
+                if tile.rect.collidepoint(x,y):
+                    
+                    if event.button == 1:
+                        click(tile)
+
+                    elif event.button == 3 and not opened.get((tile.rect.x,tile.rect.y),False):
+                        if tile.image == flag or tile.image == flag1:
+                            tile.image = pygame.Surface([r_size, r_size])
+                            if ((tile.rect.x//r_size)+(tile.rect.y//r_size)) % 2 == 0:
+                                tile.image.fill((170,215,81))
+                            else:
+                                tile.image.fill((162,209,73))
+                        else:
+                            if ((tile.rect.x//r_size)+(tile.rect.y//r_size)) % 2 == 0:
+                                tile.image = flag
+                            else:
+                                tile.image = flag1
+                    
+    tile_list.update()
     pygame.display.update()
+            
+        
+            
+        
