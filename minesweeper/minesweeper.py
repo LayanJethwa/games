@@ -7,7 +7,7 @@ screen = pygame.display.set_mode((800, 800))
 pygame.display.set_caption('Minesweeper')
 running = True
 
-g_size = 10
+g_size = 20
 r_size = 800//g_size
 
 font = pygame.font.SysFont(None, int(r_size/1.2))
@@ -109,7 +109,7 @@ def click(tile):
     if num == '':
         for t in tile_list:
             if abs(t.rect.y - tile.rect.y) + abs(t.rect.x - tile.rect.x) in [r_size,r_size*2] and grid[t.rect.y//r_size][t.rect.x//r_size] != 'x' and not opened.get((t.rect.x,t.rect.y),False):
-                q.append(t)
+                click(t)
 
 
 for tile in tile_list:
@@ -129,9 +129,6 @@ while running:
     elif won:
         screen.blit(game_over_screen_fade, (0, 0))
         screen.blit(won_text, won_text.get_rect(center=(400,400)))
-
-    if len(q) != 0:
-        click(q.pop(0))
     
     for event in pygame.event.get():
         
@@ -164,7 +161,4 @@ while running:
                     
     tile_list.update()
     pygame.display.update()
-            
-        
-            
-        
+    
