@@ -506,6 +506,20 @@ def instructions(): # Instruction text
         bossroom.obstacle_spawn()
         bossroom.obstacle_move()
         bossroom.initial_obstacle_spawn()
+
+    elif config.instructionvar == 61:
+        config.screen.fill(config.black)
+        config.screen.blit(config.arrow, arrow1)
+        config.screen.blit(config.instructionwin1, config.instructionwin1.get_rect(center=(400, 300)))
+        config.screen.blit(config.instructionwin2, config.instructionwin2.get_rect(center=(400, 340)))
+        pygame.display.update()
+
+    elif config.instructionvar == 62:
+        config.running = False
+        pygame.quit()
+        sys.exit()
+        exit()
+        quit()
         
 puzzleroom.pieces()
 puzzleroom.boss_pieces()

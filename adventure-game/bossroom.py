@@ -232,11 +232,18 @@ def die(): # Die
         config.instruction_loop = True
         config.instructionvar = 100
 
+def win(): #Dragon died
+    if config.dragon.health <= 0:
+        config.boss_room_loop = False
+        config.instruction_loop = True
+        config.instructionvar = 61
+    
 def boss_room_update(): # Update room
     config.screen.fill(config.black)
     config.screen.blit(config.b_boss_room,(0, 0)) 
     player_health()
     die()
+    win()
     obstacle_remove()
     player_obstacle_collision()
     dragon_obstacle_collision()
